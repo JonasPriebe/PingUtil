@@ -5,7 +5,7 @@
 #include <arpa/inet.h>
 #include <iostream>
 
-int pingloop =1;
+int pingloop = 1;
 
 int checksum(void *buffer, int length) {
     u_int16_t *word = static_cast<u_int16_t *>(buffer);
@@ -14,7 +14,7 @@ int checksum(void *buffer, int length) {
 
         sum += *word++;
     }
-    if (length ==1) {
+    if (length == 1) {
         sum += *(unsigned char*)word;
     }
 
@@ -51,7 +51,7 @@ void sendEchoPing(int icmpSocket, struct sockaddr_in *ping_addr) {
         exit(1);
     }
     std::cout << "Received " << response << " bytes" << '\n';
-    for (int i =0; i < response ; i++) {
+    for (int i = 0; i < response ; i++) {
         std::cout << std::hex << (int) (unsigned char) recvBuffer[i] << " ";
     }
 }
