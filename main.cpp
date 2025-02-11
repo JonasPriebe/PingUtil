@@ -60,8 +60,7 @@ void sendEchoPing(int icmpSocket, struct sockaddr_in *ping_addr) {
 
 
 int main(int argc, char *argv[]){
-    char *ip_address;
-    struct timeval timeout{};
+    timeval timeout{};
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;
     const int rawSocket = socket(AF_INET,SOCK_RAW,IPPROTO_ICMP);
@@ -75,7 +74,7 @@ int main(int argc, char *argv[]){
     }
 
     std::cout << "Socket has been created." << '\n';
-    struct sockaddr_in destinationAddress {};
+    sockaddr_in destinationAddress {};
     destinationAddress.sin_family = AF_INET;
     destinationAddress.sin_port = 0;
     destinationAddress.sin_addr.s_addr = inet_addr("1.1.1.1");
