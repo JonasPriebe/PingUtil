@@ -6,10 +6,11 @@
 #include <arpa/inet.h>
 #include <iostream>
 #include <netinet/ip.h>
+#include <unistd.h>
 
 int pingloop = 1;
 #define ICMPPAYLOADSIZE 32
-
+#define IPV4HEADERSIZE 20
 
 int checksum(void *buffer, int length) {
     u_int16_t *word = static_cast<u_int16_t *>(buffer);
@@ -38,14 +39,29 @@ struct icmpheader {
     u_int16_t seq; // Identifier for sequence tracking
 };
 
+struct completePackage {
+    struct icmpheader header;
+    char payload[ICMPPAYLOADSIZE - sizeof(header) - IPV4HEADERSIZE];
+};
 
 void sendEchoPing(int icmpSocket, struct sockaddr_in *ping_addr) {
     static uint16_t sequenceNumber = 1; // Sequence number increments each time
-    icmpheader header = {8, 0, 0, htons(1), htons(sequenceNumber++)}; // Set your custom ID and increment sequence
-    header.checksum = checksum(&header, sizeof(header)); // Calculate checksum
+    icmpheader header;
+    header.type = 8;
+    header.code = 0;
+    header.seq = htons(sequenceNumber);
+    header.id = htons(getpid());
+    header.checksum = 0;
+    completePackage package;
+    package.header = header;
+    for (int i = 0; i < sizeof(package.payload); i++) {
+        package.payload[i] = 'a' + i;
+    }
+    package.header.checksum = checksum(&package, sizeof(package));
+
     socklen_t addressLength;
     auto startTime = std::chrono::high_resolution_clock::now();
-    if (sendto(icmpSocket, &header, sizeof(header), 0, reinterpret_cast<struct sockaddr *>(ping_addr),
+    if (sendto(icmpSocket, &package, sizeof(package), 0, reinterpret_cast<struct sockaddr *>(ping_addr),
                sizeof(*ping_addr)) < 0) {
         perror("sendto failed");
         exit(1);
