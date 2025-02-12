@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <iostream>
+#include <netinet/ip.h>
 
 int pingloop = 1;
 
@@ -36,8 +37,9 @@ struct icmpheader {
     };
 
 void sendEchoPing(int icmpSocket, struct sockaddr_in *ping_addr) {
-    icmpheader header = {8,0,0,1234,10};
-    header.checksum = checksum(&header,sizeof(header));
+    static uint16_t sequenceNumber = 1; // Sequence number increments each time
+    icmpheader header = {8, 0, 0, htons(1), htons(sequenceNumber++)}; // Set your custom ID and increment sequence
+    header.checksum = checksum(&header, sizeof(header)); // Calculate checksum
     socklen_t addressLength;
     if (sendto(icmpSocket, &header, sizeof(header), 0, reinterpret_cast<struct sockaddr *>(ping_addr), sizeof(*ping_addr)) < 0) {
         perror("sendto failed");
@@ -51,10 +53,19 @@ void sendEchoPing(int icmpSocket, struct sockaddr_in *ping_addr) {
         exit(1);
     }
     std::cout << "Received " << response << " bytes" << '\n';
-    for (int i = 0; i < response ; i++) {
-        std::cout << std::hex << (int) (unsigned char) recvBuffer[i] << " ";
+
+    for (int i = 0; i < response; i++) {
+        std::cout << std::hex << (int)(unsigned char)recvBuffer[i] << " ";
     }
+
+    struct icmpheader *icmpReply = reinterpret_cast<icmpheader *>(recvBuffer + sizeof(struct ip));
+    std::cout << "ICMP Type: " << (int)icmpReply->type << std::endl;
+    std::cout << "ICMP Code: " << (int)icmpReply->code << std::endl;
+    std::cout << "Checksum: " << ntohs(icmpReply->checksum) << std::endl;
+    std::cout << "ID: " << ntohs(icmpReply->id) << std::endl;
+    std::cout << "Sequence: " << ntohs(icmpReply-> seq )<< std::endl;
 }
+
 
 
 
@@ -77,7 +88,7 @@ int main(int argc, char *argv[]){
     sockaddr_in destinationAddress {};
     destinationAddress.sin_family = AF_INET;
     destinationAddress.sin_port = 0;
-    destinationAddress.sin_addr.s_addr = inet_addr("1.1.1.1");
+    destinationAddress.sin_addr.s_addr = inet_addr("8.8.8.8");
     sendEchoPing(rawSocket,&destinationAddress);
     return 0;
 }
