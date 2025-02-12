@@ -10,7 +10,6 @@
 
 int pingloop = 1;
 #define ICMPPAYLOADSIZE 32
-#define IPV4HEADERSIZE 20
 
 int checksum(void *buffer, int length) {
     u_int16_t *word = static_cast<u_int16_t *>(buffer);
@@ -41,7 +40,10 @@ struct icmpheader {
 
 struct completePackage {
     struct icmpheader header;
-    char payload[ICMPPAYLOADSIZE - sizeof(header) - IPV4HEADERSIZE];
+    // our min size without payload is 28 bytes
+    // 20 bytes IPV4 header + 8 bytes ICMP Header
+    // for now we hardcode payload size
+    char payload[ICMPPAYLOADSIZE];
 };
 
 void sendEchoPing(int icmpSocket, struct sockaddr_in *ping_addr) {
@@ -66,6 +68,8 @@ void sendEchoPing(int icmpSocket, struct sockaddr_in *ping_addr) {
         perror("sendto failed");
         exit(1);
     }
+    std::cout << "Payload size: " << sizeof(package.payload) << '\n';
+    std::cout << "Complete package size: " << sizeof(package.payload) + 28 << '\n';
     std::cout << "ICMP request sent successfully!" << std::endl;
     char recvBuffer[128];
     ssize_t response = recvfrom(icmpSocket, recvBuffer, sizeof(recvBuffer), 0,
@@ -84,6 +88,7 @@ void sendEchoPing(int icmpSocket, struct sockaddr_in *ping_addr) {
     }
 
     struct icmpheader *icmpReply = reinterpret_cast<icmpheader *>(recvBuffer + sizeof(struct ip));
+    std::cout << '\n';
     std::cout << "ICMP Type: " << (int) icmpReply->type << std::endl;
     std::cout << "ICMP Code: " << (int) icmpReply->code << std::endl;
     std::cout << "Checksum: " << ntohs(icmpReply->checksum) << std::endl;
